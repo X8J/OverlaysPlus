@@ -24,12 +24,12 @@
                         }, \
                         buttons: Group { orientation:'row', alignment:['center', 'bottom'], \
                             retargetBtn: Button { text:'Retarget Folder', alignment:['center', 'bottom'], preferredSize:[100, 30] }, \
-                            applyBtn: Button { text:'Import Texture', alignment:['center', 'bottom'], preferredSize:[100, 30] }, \
+                            importBtn: Button { text:'Import Texture', alignment:['center', 'bottom'], preferredSize:[100, 30] }, \
                         }, \
                     }";
         
         window.grp = window.add(res);
-        
+
         function loadTextures(folder, isPreset) {
             var textures = folder.getFiles(function (file) {
                 return file instanceof File && /\.(jpg|jpeg|png|bmp)$/i.test(file.name);
@@ -52,8 +52,6 @@
             if (folder) {
                 customFolderPath = folder.fsName;
                 loadTextures(folder, false);
-            } else {
-                alert("No folder selected.");
             }
         }
 
@@ -71,15 +69,38 @@
             }
         }
 
-      
-        selectFolder();
+        function importTexture() {
+            var file = File.openDialog("Select an image file to import", "*.jpg;*.jpeg;*.png;*.bmp", false);
+            if (file) {
+                var targetFolder = window.grp.tabs.customTab.value ? new Folder(customFolderPath) : new Folder(presetFolderPath);
+                if (!targetFolder.exists) {
+                    targetFolder.create();
+                }
+        
+                var targetFile = new File(targetFolder.fsName + "/" + file.name);
+        
+                if (targetFile.exists) {
+                    var overwrite = confirm("File already exists. Do you want to overwrite it?");
+                    if (!overwrite) {
+                        return;
+                    }
+                }
+        
+                if (file.copy(targetFile)) {
+                    loadTextures(targetFolder, window.grp.tabs.presetTab.value);
+                } else {
+                    alert("Failed to copy file.");
+                }
+            }
+        }
 
-       
+        selectFolder();
         loadTextures(new Folder(presetFolderPath), true);
 
         window.grp.tabs.customTab.onClick = switchTab;
         window.grp.tabs.presetTab.onClick = switchTab;
         window.grp.buttons.retargetBtn.onClick = selectFolder;
+        window.grp.buttons.importBtn.onClick = importTexture;
 
         window.grp.main.textureList.onChange = function () {
             var selectedTexture = window.grp.tabs.customTab.value ? 
@@ -87,19 +108,6 @@
                 presetTextures[this.selection.index];
             if (selectedTexture) {
                 window.grp.main.preview.previewImage.image = new File(selectedTexture.fsName);
-            }
-        };
-
-        window.grp.buttons.applyBtn.onClick = function () {
-            var selectedTexture = window.grp.tabs.customTab.value ? 
-                customTextures[window.grp.main.textureList.selection.index] : 
-                presetTextures[window.grp.main.textureList.selection.index];
-            if (selectedTexture) {
-                app.beginUndoGroup("Import Texture");
-                app.project.importFile(new ImportOptions(File(selectedTexture)));
-                app.endUndoGroup();
-            } else {
-                alert("Please select a texture to import.");
             }
         };
 
