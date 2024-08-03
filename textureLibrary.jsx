@@ -1,5 +1,5 @@
 {
-    var scriptName = "Texture Library with Preview";
+    var scriptName = "AETextures";
     var presetFolderPath = "C:/presetAETextures"; // use forward slashes for path
     var presetTextures = [];
     var customTextures = [];
@@ -234,6 +234,16 @@
         }
 
         return window;
+    }
+    function loadSettings() {
+        var settingsFile = new File(Folder.userData.fsName + "/TextureLibrarySettings.json");
+        if (settingsFile.exists) {
+            settingsFile.open('r');
+            var data = JSON.parse(settingsFile.read());
+            settingsFile.close();
+            return data.customFolderPath || "";
+        }
+        return "";
     }
 
     var myScriptPal = buildUI(this);
