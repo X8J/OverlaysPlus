@@ -1,5 +1,9 @@
 {
-    var scriptName = "AEtextures";
+    var scriptName = "Texture Library with Preview";
+    var presetFolderPath = "C:/Users/vikwa/Downloads/splinter/splinter"; // use forward slashes for path
+    var presetTextures = [];
+    var customTextures = [];
+    var customFolderPath = "";
 
     function buildUI(thisObj) {
         var window = (thisObj instanceof Panel) ? thisObj : new Window("palette", scriptName, undefined, { resizeable: true });
@@ -8,6 +12,10 @@
                         header: Group { orientation:'row', alignment:['fill', 'top'], \
                             title: StaticText { text:'" + scriptName + "', alignment:['fill', 'center'] }, \
                         }, \
+                        tabs: Group { orientation:'row', alignment:['fill', 'top'], \
+                            customTab: RadioButton { text:'Custom Textures', alignment:['left', 'top'], value:true }, \
+                            presetTab: RadioButton { text:'Preset Textures', alignment:['left', 'top'] }, \
+                        }, \
                         main: Group { orientation:'row', alignment:['fill', 'fill'], \
                             textureList: ListBox { alignment:['left', 'fill'], preferredSize:[150, -1], properties:{multiselect:false, scrollable:true} }, \
                             preview: Group { orientation:'column', alignment:['fill', 'fill'], \
@@ -15,52 +23,89 @@
                             }, \
                         }, \
                         buttons: Group { orientation:'row', alignment:['center', 'bottom'], \
+                            retargetBtn: Button { text:'Retarget Folder', alignment:['center', 'bottom'], preferredSize:[100, 30] }, \
                             applyBtn: Button { text:'Import Texture', alignment:['center', 'bottom'], preferredSize:[100, 30] }, \
                         }, \
                     }";
         
         window.grp = window.add(res);
-
-        //prompt texture fold
-        var textureFolder = Folder.selectDialog("Select the folder containing your textures");
-        if (textureFolder) {
-            var textures = textureFolder.getFiles(function (file) {
+        
+        function loadTextures(folder, isPreset) {
+            var textures = folder.getFiles(function (file) {
                 return file instanceof File && /\.(jpg|jpeg|png|bmp)$/i.test(file.name);
             });
 
-            // what the heck
+            window.grp.main.textureList.removeAll();
             for (var i = 0; i < textures.length; i++) {
                 window.grp.main.textureList.add("item", textures[i].name);
             }
 
-            // update preview
-            window.grp.main.textureList.onChange = function () {
-                var selectedTexture = textures[this.selection.index];
-                if (selectedTexture) {
-                    window.grp.main.preview.previewImage.image = new File(selectedTexture.fsName);
-                }
-            };
-
-            // apply texture
-            window.grp.buttons.applyBtn.onClick = function () {
-                var selectedTexture = textures[window.grp.main.textureList.selection.index];
-                if (selectedTexture) {
-                    app.beginUndoGroup("Import Texture");
-                    app.project.importFile(new ImportOptions(File(selectedTexture)));
-                    app.endUndoGroup();
-                } else {
-                    alert("Please select a texture to import.");
-                }
-            };
-
-          
-            window.layout.layout(true);
-            if (textures.length > 0) {
-                window.grp.main.textureList.selection = 0;
+            if (isPreset) {
+                presetTextures = textures;
+            } else {
+                customTextures = textures;
             }
-        } else {
-            alert("No folder selected. Script will now exit.");
-            window.close();
+        }
+
+        function selectFolder() {
+            var folder = Folder.selectDialog("Select the folder containing your textures");
+            if (folder) {
+                customFolderPath = folder.fsName;
+                loadTextures(folder, false);
+            } else {
+                alert("No folder selected.");
+            }
+        }
+
+        function switchTab() {
+            if (window.grp.tabs.customTab.value) {
+                window.grp.buttons.retargetBtn.visible = true;
+                if (customFolderPath) {
+                    loadTextures(new Folder(customFolderPath), false);
+                } else {
+                    selectFolder();
+                }
+            } else {
+                window.grp.buttons.retargetBtn.visible = false;
+                loadTextures(new Folder(presetFolderPath), true);
+            }
+        }
+
+      
+        selectFolder();
+
+       
+        loadTextures(new Folder(presetFolderPath), true);
+
+        window.grp.tabs.customTab.onClick = switchTab;
+        window.grp.tabs.presetTab.onClick = switchTab;
+        window.grp.buttons.retargetBtn.onClick = selectFolder;
+
+        window.grp.main.textureList.onChange = function () {
+            var selectedTexture = window.grp.tabs.customTab.value ? 
+                customTextures[this.selection.index] : 
+                presetTextures[this.selection.index];
+            if (selectedTexture) {
+                window.grp.main.preview.previewImage.image = new File(selectedTexture.fsName);
+            }
+        };
+
+        window.grp.buttons.applyBtn.onClick = function () {
+            var selectedTexture = window.grp.tabs.customTab.value ? 
+                customTextures[window.grp.main.textureList.selection.index] : 
+                presetTextures[window.grp.main.textureList.selection.index];
+            if (selectedTexture) {
+                app.beginUndoGroup("Import Texture");
+                app.project.importFile(new ImportOptions(File(selectedTexture)));
+                app.endUndoGroup();
+            } else {
+                alert("Please select a texture to import.");
+            }
+        };
+
+        window.layout.layout(true);
+        if (customTextures.length > 0) {
+            window.grp.main.textureList.selection = 0;
         }
 
         return window;
