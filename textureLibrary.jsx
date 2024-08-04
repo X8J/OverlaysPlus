@@ -1,19 +1,13 @@
 {
     var scriptName = "AETextures";
-    var presetFolderPath = "C:/presetAETextures"; // use forward slashes for path
+    var presetFolderPath = "C:/presetAETextures";
     var presetTextures = [];
     var customTextures = [];
     var customFolderPath = "";
-    var uiElements = null; // references to ui el
+    var uiElements = null;
     ensurePresetFolderExists();
 
-    
-
     function loadTextures(folder, isPreset) {
-        if (isPreset) {
-            ensurePresetFolderExists();
-        }
-        
         var textures = folder.getFiles(function (file) {
             return file instanceof File && /\.(jpg|jpeg|png|bmp)$/i.test(file.name);
         });
@@ -61,16 +55,15 @@
                                 previewImage: Image { alignment:['fill', 'fill'], preferredSize:[300, 300] }, \
                             }, \
                         }, \
-                        buttons: Group { orientation:'row', alignment:['center', 'bottom'], \
-                            retargetBtn: Button { text:'Retarget Folder', alignment:['center', 'bottom'], preferredSize:[100, 30] }, \
-                            addBtn: Button { text:'Add Texture', alignment:['center', 'bottom'], preferredSize:[100, 30] }, \
-                            importBtn: Button { text:'Import Texture', alignment:['center', 'bottom'], preferredSize:[100, 30] }, \
+                        buttons: Group { orientation:'row', alignment:['left', 'bottom'], \
+                            retargetBtn: Button { text:'Retarget Folder', alignment:['left', 'bottom'], preferredSize:[100, 30] }, \
+                            addBtn: Button { text:'Add Texture', alignment:['left', 'bottom'], preferredSize:[100, 30] }, \
+                            importBtn: Button { text:'Import Texture', alignment:['left', 'bottom'], preferredSize:[100, 30] }, \
                         }, \
                     }";
         
         window.grp = window.add(res);
-
-        // store ref for ui 
+    
         uiElements = {
             textureList: window.grp.main.textureList,
             customTab: window.grp.tabs.customTab,
@@ -81,25 +74,16 @@
             previewImage: window.grp.main.preview.previewImage
         };
 
-        function selectFolder() {
-            var folder = Folder.selectDialog("Select the folder containing your textures");
-            if (folder) {
-                customFolderPath = folder.fsName;
-                loadTextures(folder, false);
-                saveSettings(); // save new custom folderp ath
-            }
-        }
-
         function switchTab() {
             if (uiElements.customTab.value) {
                 uiElements.retargetBtn.visible = true;
-                if (customFolderPath) {
-                    loadTextures(new Folder(customFolderPath), false);
-                } else {
-                    selectFolder();
-                }
-            } else {
+                uiElements.textureList.visible = true;
+                uiElements.previewImage.visible = true;
+                loadTextures(new Folder(customFolderPath), false);
+            } else if (uiElements.presetTab.value) {
                 uiElements.retargetBtn.visible = false;
+                uiElements.textureList.visible = true;
+                uiElements.previewImage.visible = true;
                 loadTextures(new Folder(presetFolderPath), true);
             }
         }
@@ -107,13 +91,8 @@
         function addTexture() {
             var file = File.openDialog("Select an image file to add", "*.jpg;*.jpeg;*.png;*.bmp", false);
             if (file) {
-                var targetFolder;
-                if (uiElements.customTab.value) {
-                    targetFolder = new Folder(customFolderPath);
-                } else {
-                    ensurePresetFolderExists();
-                    targetFolder = new Folder(presetFolderPath);
-                }
+                var targetFolder = uiElements.customTab.value ? new Folder(customFolderPath) : new Folder(presetFolderPath);
+                ensurePresetFolderExists();
                 
                 if (!targetFolder.exists) {
                     targetFolder.create();
@@ -121,16 +100,13 @@
         
                 var targetFile = new File(targetFolder.fsName + "/" + file.name);
         
-                if (targetFile.exists) {
-                    var overwrite = confirm("File already exists. Do you want to overwrite it?");
-                    if (!overwrite) {
-                        return;
-                    }
+                if (targetFile.exists && !confirm("File already exists. Do you want to overwrite it?")) {
+                    return;
                 }
         
                 if (file.copy(targetFile)) {
                     loadTextures(targetFolder, uiElements.presetTab.value);
-                    alert("Texture added successfully to the folder.");
+                    alert("Texture added successfully.");
                 } else {
                     alert("Failed to copy file.");
                 }
@@ -148,77 +124,46 @@
                 alert("Please select a texture to import.");
             }
         }
+
         function importTextureToProject(file) {
             if (app.project) {
-                var textureLibraryFolder = null;
-                
-                // check if texturelibrary exists if not make it
-                for (var i = 1; i <= app.project.numItems; i++) {
-                    if (app.project.item(i) instanceof FolderItem && app.project.item(i).name === "TextureLibrary") {
-                        textureLibraryFolder = app.project.item(i);
-                        break;
-                    }
-                }
-                
-                if (!textureLibraryFolder) {
-                    textureLibraryFolder = app.project.items.addFolder("TextureLibrary");
-                }
-                
-                // import texture to tL folder
+                var textureLibraryFolder = app.project.items.addFolder("TextureLibrary");
                 var importOptions = new ImportOptions(file);
                 var importedItem = app.project.importFile(importOptions);
                 importedItem.parentFolder = textureLibraryFolder;
                 
-                // check if active comp and selected layer
                 var activeComp = app.project.activeItem;
                 if (activeComp && activeComp instanceof CompItem) {
                     var selectedLayers = activeComp.selectedLayers;
                     if (selectedLayers.length > 0) {
                         var selectedLayer = selectedLayers[0];
-                        
-                        // calculate length of layer
                         var selectedLayerDuration = selectedLayer.outPoint - selectedLayer.inPoint;
-                        
-                        // add texture to comp
                         var newLayer = activeComp.layers.add(importedItem);
-                        
-                        // move layer above selected
                         newLayer.moveBefore(selectedLayer);
-                        
-                        // match in point and duration to selected
                         newLayer.startTime = selectedLayer.startTime;
                         newLayer.inPoint = selectedLayer.inPoint;
                         newLayer.outPoint = newLayer.inPoint + selectedLayerDuration;
-                        
-                        //alert("Texture imported successfully into TextureLibrary folder and added to the composition.");
                     } else {
                         alert("Please select a layer in the composition before importing.");
                     }
                 } else {
-                    alert("Texture imported successfully into TextureLibrary folder. Please open a composition and select a layer to add the texture to the comp.");
+                    alert("Texture imported successfully. Please open a composition and select a layer to add the texture to the comp.");
                 }
             } else {
                 alert("No active project. Please open a project before importing textures.");
             }
         }
 
-        // load the saved custom folder path
         customFolderPath = loadSettings();
-
-        if (customFolderPath) {
-            loadTextures(new Folder(customFolderPath), false);
-        } else {
-            selectFolder();
-        }
         loadTextures(new Folder(presetFolderPath), true);
+        if (customFolderPath) loadTextures(new Folder(customFolderPath), false);
 
-       
         uiElements.customTab.onClick = switchTab;
         uiElements.presetTab.onClick = switchTab;
         uiElements.retargetBtn.onClick = selectFolder;
         uiElements.addBtn.onClick = addTexture;
         uiElements.importBtn.onClick = importTexture;
-
+        
         uiElements.textureList.onChange = function () {
             var selectedTexture = uiElements.customTab.value ? 
                 customTextures[this.selection.index] : 
@@ -228,6 +173,15 @@
             }
         };
 
+        window.onResizing = window.onResize = function () {
+            window.layout.resize();
+            var previewWidth = window.grp.main.size.width - uiElements.textureList.size.width - 10;
+            var previewHeight = window.grp.main.size.height - 10;
+            uiElements.previewImage.size = [previewWidth, previewHeight];
+            
+            window.layout.layout(true);
+        };
+
         window.layout.layout(true);
         if (customTextures.length > 0) {
             uiElements.textureList.selection = 0;
@@ -235,6 +189,7 @@
 
         return window;
     }
+
     function loadSettings() {
         var settingsFile = new File(Folder.userData.fsName + "/TextureLibrarySettings.json");
         if (settingsFile.exists) {
