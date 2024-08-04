@@ -9,6 +9,8 @@ To add
 + Support for video files, with preview
 + Different color for video and image
 + Move towards overlay library than just texture
++ Stylized UI
++ Support for GLB files (!?)
 
 # How to install
 Go to your after effects install > Support Files > Scripts > ScriptUI Panels > Put script in that folder. 
