@@ -16,6 +16,8 @@ To add
 + Move towards overlay library than just texture
 + Stylized UI
 + Support for GLB files (!?)
++ Add with blending mode
++ FIX START OF VIDEO OVERLAYS BEING CUT OFF when imported not at start of timeline (move video to start of layer selected instead of cutting line for the textures)
 
 # How to install
 Go to your after effects install > Support Files > Scripts > ScriptUI Panels > Put script in that folder. 
