@@ -2,6 +2,8 @@
 A built in texture library for after effects, WIP
 Preset textures location is C:/presetAETextures, drag any textures you want in the preset textures tab into that folder!
 
+![alt text](https://github.com/X8J/OverlaysPlus/blob/main/preview.png?raw=true)
+
 #Where to get textures?
 One of my favorite websites to get high quality textures from is Texturelabs texturelabs.com https://texturelabs.org/
 
