@@ -19,6 +19,7 @@ To add
 + Add with blending mode
 + FIX START OF VIDEO OVERLAYS BEING CUT OFF when imported not at start of timeline (move video to start of layer selected instead of cutting line for the textures)
 + "Open target folder" (Like opening video)
++ Make less convoluted (send to logan)
 
 # How to install
 Go to your after effects install > Support Files > Scripts > ScriptUI Panels > Put script in that folder. 
